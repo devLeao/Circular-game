@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Circular Game - Economia Circular</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+
+  <style>
+    :root {
+      --bg-main: #fff;
+      --text-main: #333;
+      --btn-bg: #56AB2F;
+      --btn-hover: #4CAF50;
+      --option-bg: #f9f9f9;
+    }
+    [data-theme="dark"] {
+      --bg-main: #1e1e1e;
+      --text-main: #eee;
+      --btn-bg: #2e7d32;
+      --btn-hover: #43a047;
+      --option-bg: #2b2b2b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+    body, html {
+      height: 100%; display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #2b3a2f, #1e2d1e); padding: 16px;
+    }
+    .screen {
+      display: none; width: 100%; max-width: 600px; background: var(--bg-main);
+      border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      padding: 24px; text-align: center;
+    }
+    .active { display: block; }
+    h1, h2, h3 { color: var(--text-main); margin-bottom: 16px; }
+    p { color: var(--text-main); margin-bottom: 16px; }
+    img {
+      max-width: 70%;
+      height: auto;
+      border-radius: 8px;
+      margin: 0 auto 16px;
+      display: block;
+    }
+    button {
+      padding: 12px 24px; border: none; border-radius: 8px;
+      background: var(--btn-bg); color: #fff; font-size: 16px;
+      cursor: pointer; margin: 8px; transition: background .3s;
+    }
+    button:hover { background: var(--btn-hover); }
+    button:disabled { background: #aaa; cursor: default; }
+    .locked { opacity: .5; }
+    #score-display { font-size: 20px; color: var(--text-main); margin-bottom: 12px; font-weight: 600; }
+    #progress-bar {
+      height: 8px; background: #e0e0e0; margin: 0 auto 16px;
+      width: calc(100% - 48px); border-radius: 4px;
+    }
+    #progress { height: 100%; width: 0; background: #56AB2F; transition: width .4s; }
+    #time-bar { height: 6px; background: #4CAF50; width: 100%; border-radius: 4px; margin-bottom: 12px; animation: shrink 20s linear forwards; }
+    @keyframes shrink { from { width: 100%; } to { width: 0%; } }
+    .option {
+      display: block; width: 100%; padding: 12px 16px; margin-bottom: 12px;
+      border: 2px solid #56AB2F; border-radius: 8px; background: var(--option-bg);
+      color: var(--text-main); cursor: pointer; opacity: 0; transition: background .3s, color .3s;
+    }
+    .option:hover { background: #56AB2F; color: #fff; }
+    .fade-in { animation: fadeInUp 0.5s forwards; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .correct { background: #4CAF50 !important; color: #fff !important; border-color: #4CAF50 !important; }
+    .wrong { background: #E53935 !important; color: #fff !important; border-color: #E53935 !important; }
+    #feedback { font-size: 20px; margin: 16px 0; display: none; }
+    #ranking { list-style: none; padding: 0; margin: 16px 0; text-align: left; }
+    #ranking li { background: #f0f0f0; margin: 4px 0; padding: 8px; border-radius: 4px; }
+    #theme-toggle {
+      position: fixed; top: 10px; right: 10px; background: #000; color: #fff; z-index: 100;
+      border: none; border-radius: 6px; padding: 8px 12px; font-size: 18px;
+    }
+    @media (max-width: 600px) {
+      body, html { padding: 8px; }
+      .screen { padding: 16px; }
+      h1, h2, h3 { font-size: 1.2rem; }
+      button { font-size: 14px; padding: 10px 16px; }
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+</head>
+<body data-theme="light">
+  <button id="theme-toggle">🌙</button>
+  
+  <!-- Introduction Screens -->
+  <div id="intro1" class="screen active"><h1>Economia Circular</h1><p>O que é e quais são as práticas?</p><button onclick="showScreen('intro2')">Avançar</button></div>
+  <div id="intro2" class="screen"><h2>O que é Economia Circular?</h2><p>A economia circular é um sistema econômico que visa maximizar o uso dos recursos e minimizar a geração de resíduos, utilizando a reutilização, a reparação, a reciclagem e a renovação de produtos e materiais. Diferente do modelo de economia linear, onde os recursos são extraídos, produzidos, consumidos e descartados, a economia circular busca manter os recursos em uso por um ciclo mais longo, transformando-os em insumos para novos processos produtivos. </p><button onclick="showScreen('intro3')">Avançar</button></div>
+    <div id="intro3" class="screen"><h2>Reduzir</h2><img src="./img/reduzirr.jpg" alt="Reduzir"><p>"Reduzir significa consumir menos produtos e optar por aqueles com maior durabilidade, reutilizar significa dar uma nova vida a materiais que já foram usados, e reciclar implica transformar materiais em novos produtos, evitando o descarte</p><button onclick="showScreen('intro4')">Avançar</button></div>
+  <div id="intro4" class="screen"><h2>Reutilizar</h2><img src="./img/reutilizar.jpg" alt="Reutilizar"><p>"Reutilizar" significa dar nova vida a um objeto, material ou produto, evitando que seja descartado e, consequentemente, reduzindo o consumo de recursos e o desperdício. Em vez de ser descartado ou transformado em outro produto (reciclagem), o item é usado novamente, seja para a mesma função ou para uma função diferente</p><button onclick="showScreen('intro5')">Avançar</button></div>
+  <div id="intro5" class="screen"><h2>Reciclar</h2><img src="./img/reciclar.jpg" alt="Reciclar"><p>Reciclar, significa recuperar parte reutilizável de produtos consumidos com o objetivo de reintroduzi-los no ciclo de produção original ou na criação de novos objetos a partir dessa matéria prima</p><button onclick="showScreen('intro6')">Avançar</button></div>
+  <div id="intro6" class="screen">
+  <h2>Economia Circular na Prática</h2>
+  <img src="./img/economiacircular.png" alt="Prática">
+  <button onclick="showScreen('transition')">Avançar</button>
+</div>
+
+<!-- Transição antes dos desafios -->
+<div id="transition" class="screen">
+  <h2>Pronto para o desafio?</h2>
+  <p>Agora que você já sabe um pouco mais sobre os conteúdos, que tal irmos para um desafio?</p>
+  <p>Vamos fazer 3 desafios em cada seção, para poder saber o seu nível de conhecimento sobre o assunto. Bora?</p>
+  <button onclick="showScreen('topicSelect')">Vamos lá!</button>
+</div>
+
+  <!-- Topic Selection -->
+  <div id="topicSelect" class="screen">
+    <h2>Escolha um Desafio</h2>
+    <button id="btn-reduzir" onclick="startQuiz('reduzir')">Reduzir</button>
+    <button id="btn-reutilizar" class="locked" disabled onclick="startQuiz('reutilizar')">Reutilizar</button>
+    <button id="btn-reciclar" class="locked" disabled onclick="startQuiz('reciclar')">Reciclar</button>
+    <button onclick="showScreen('intro1')">Revisitar Conteúdo</button>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div id="quiz-container" class="screen">
+    <div id="score-display">Pontuação: 0</div>
+    <div id="progress-bar"><div id="progress"></div></div>
+    <h3 id="question"></h3>
+    <div id="options"></div>
+    <div id="feedback"></div>
+    <button id="next-btn" style="display:none">Próxima</button>
+  </div>
+
+  <!-- Result & Ranking -->
+  <div id="result" class="screen">
+    <h2 id="result-msg"></h2>
+    <h3>Ranking (Top 5)</h3>
+    <ul id="ranking"></ul>
+    <button onclick="resetGame()">Reiniciar</button>
+  </div>
+
+  <script>
+    // Navigation
+    function showScreen(id) {
+      $('.screen').hide();
+      $('#' + id).show();
+    }
+    $(document).ready(() => showScreen('intro1'));
+
+    // Questions Data
+    const sections = {
+      reduzir: { questions: [
+        { q: 'Qual prática reduz plástico?', options: ['Sacola reutilizável', 'Canudo descartável', 'Garrafa plástica'], answer: 0 },
+        { q: 'Comprar a granel é prática de:', options: ['Reduzir', 'Reutilizar', 'Reciclar'], answer: 0 },
+        { q: 'Planejar compras evita:', options: ['Desperdício', 'Impulso', 'Gastos excessivos'], answer: 0 },
+        { q: 'LED substitui lâmpada:', options: ['Incandescente', 'Fluorescente', 'Halógena'], answer: 0 },
+        { q: 'Reduzir consumo de água significa:', options: ['Economia', 'Desperdício', 'Igual'], answer: 0 }
+      ], unlocked: true, saved: 0 },
+
+      reutilizar: { questions: [
+        { q: 'Transformar pote em vaso é prática de:', options: ['Reduzir', 'Reutilizar', 'Reciclar'], answer: 1 },
+        { q: 'Doar roupas em bom estado é prática de:', options: ['Reduzir', 'Reutilizar', 'Reciclar'], answer: 1 },
+        { q: 'Pneus velhos como floreiras é prática de:', options: ['Reduzir', 'Reutilizar', 'Reciclar'], answer: 1 },
+        { q: 'Reutilizar difere de reciclar porque:', options: ['Não altera o material', 'Processa matéria-prima', 'Descarta'], answer: 0 },
+        { q: 'Reutilizar aumenta a:', options: ['Vida útil', 'Desperdício', 'Consumo'], answer: 0 }
+      ], unlocked: false, saved: 0 },
+
+      reciclar: { questions: [
+        { q: 'Material amplamente reciclável:', options: ['Alumínio', 'Restos de comida', 'Óleo de cozinha'], answer: 0 },
+        { q: 'Papel sujo pode ser reciclado?', options: ['Sim', 'Não', 'Depende'], answer: 2 },
+        { q: 'Reciclar significa:', options: ['Processar materiais', 'Reusar', 'Descartar'], answer: 0 },
+        { q: 'Plástico para reciclar deve estar:', options: ['Limpo e seco', 'Molhado', 'Com resíduos'], answer: 0 },
+        { q: 'Vidro reciclado vira:', options: ['Nova embalagem', 'Arte', 'Lixa'], answer: 0 }
+      ], unlocked: false, saved: 0 }
+    };
+
+    let currentSec = '', idx = 0, score = 0, timer;
+
+    // Unlock logic
+        function updateLocks() {
+      for (const sec in sections) {
+        const btn = $('#btn-' + sec);
+        if (sections[sec].unlocked) btn.prop('disabled', false).removeClass('locked');
+      }
+    }
+    updateLocks();
+
+    // Start Quiz
+    function startQuiz(sec) {
+      currentSec = sec;
+      idx = 0;
+      score = 0;
+      $('#score-display').text('Pontuação: 0');
+      showScreen('quiz-container');
+      loadQuestion();
+    }
+
+    // Load Question
+    function loadQuestion() {
+      clearInterval(timer);
+      let timeLeft = 20;
+      $('#score-display').text(`Pontuação: ${score} | Tempo: ${timeLeft}s`);
+      timer = setInterval(() => {
+        timeLeft--;
+        $('#score-display').text(`Pontuação: ${score} | Tempo: ${timeLeft}s`);
+        if (timeLeft <= 0) {
+          clearInterval(timer);
+          selectOption(-1);
+        }
+      }, 1000);
+
+      const q = sections[currentSec].questions[idx];
+      $('#question').text(q.q);
+      $('#options').empty();
+      $('#feedback').hide();
+      $('#next-btn').hide();
+      q.options.forEach((opt, i) => {
+        const btn = $(`<button class="option">${opt}</button>`);
+        btn.click(() => selectOption(i));
+        $('#options').append(btn);
+        setTimeout(() => btn.addClass('fade-in'), i * 100);
+      });
+      $('#progress').css('width', `${((idx + 1) / sections[currentSec].questions.length) * 100}%`);
+    }
+
+    // Select Option
+    function selectOption(i) {
+      clearInterval(timer);
+      const q = sections[currentSec].questions[idx];
+      $('.option').prop('disabled', true).each((j, el) => {
+        if (j === q.answer) $(el).addClass('correct');
+        if (j === i && i !== q.answer) $(el).addClass('wrong');
+      });
+      if (i === q.answer) score += 100;
+      $('#feedback').text(i === q.answer ? '✔ Correto!' : '✖ Errado!').show();
+      $('#next-btn').show().off('click').click(nextQuestion);
+    }
+
+    // Next Question
+    function nextQuestion() {
+      idx++;
+      if (idx < sections[currentSec].questions.length) {
+        loadQuestion();
+      } else {
+        endSection();
+      }
+    }
+
+    // End of Section
+    function endSection() {
+      sections[currentSec].saved = score;
+      const next = currentSec === 'reduzir' ? 'reutilizar' : currentSec === 'reutilizar' ? 'reciclar' : null;
+      if (next) {
+        if (score >= 300) {
+          sections[next].unlocked = true;
+          updateLocks();
+          alert(`Seção ${currentSec} concluída! Próximo desafio liberado.`);
+          showScreen('topicSelect');
+          return;
+        } else {
+          alert('Você precisa de 3 acertos (300 pontos) para liberar o próximo.');
+          showScreen('topicSelect');
+          return;
+        }
+      }
+      // After all sections
+      const total = Object.values(sections).reduce((sum, s) => sum + s.saved, 0);
+      const maxPossible = Object.values(sections).reduce((sum, s) => sum + s.questions.length * 100, 0);
+      const pct = (total / maxPossible) * 100;
+      let msg = '';
+      if (pct >= 70 && pct < 80) msg = `Parabéns, você se saiu muito bem no assunto e mostrou conhecimento sobre a economia circular.\nSua pontuação foi de ${total}.`;
+      else if (pct >= 80 && pct < 93) msg = `Uau, você realmente mostrou domínio sobre o assunto, continue assim.\nSua pontuação foi de ${total}.`;
+      else {
+        msg = `Você realmente é um expert no assunto, parabéns.\nO mundo agradece pelo seu conhecimento em reciclagem.\nSua pontuação foi de ${total}.`;
+        confetti();
+      }
+      const name = prompt('Digite seu nome para o ranking:');
+      if (name) {
+        storeRankOnline(name, total);
+        renderRankOnline();
+      }
+      $('#result-msg').text(msg);
+      showScreen('result');
+    }
+
+    // Reset Game
+    function resetGame() {
+      for (const sec in sections) {
+        sections[sec].unlocked = sec === 'reduzir';
+        sections[sec].saved = 0;
+      }
+      showScreen('intro1');
+    }
+
+</script>
+<script>
+  document.getElementById('theme-toggle').onclick = function () {
+    const body = document.body;
+    const current = body.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    body.setAttribute('data-theme', next);
+    this.textContent = next === 'dark' ? '☀️' : '🌙';
+  };
+</script>
+
+</body>
+</html>
