@@ -6,8 +6,7 @@
   <title>Circular Game - Economia Circular</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+  
 
   <style>
     :root {
@@ -303,6 +302,46 @@
     this.textContent = next === 'dark' ? '☀️' : '🌙';
   };
 </script>
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+  import { getDatabase, ref, push, set, query, orderByChild, limitToLast, get } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDjmhSO1Nkj4uFRrRCgg5S-zSckn_Ooafw",
+    authDomain: "circulargame-devleao.firebaseapp.com",
+    databaseURL: "https://circulargame-devleao-default-rtdb.firebaseio.com",
+    projectId: "circulargame-devleao",
+    storageBucket: "circulargame-devleao.firebasestorage.app",
+    messagingSenderId: "314596652474",
+    appId: "1:314596652474:web:9c0b0ce5f42b8f8d2a9983"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window.storeRankOnline = function(name, score) {
+    const newEntry = push(ref(db, 'ranking'));
+    set(newEntry, { name, score, timestamp: Date.now() });
+  };
+
+  window.renderRankOnline = function() {
+    const q = query(ref(db, 'ranking'), orderByChild('score'), limitToLast(5));
+    get(q).then(snapshot => {
+      const ranking = [];
+      snapshot.forEach(child => {
+        ranking.unshift(child.val());
+      });
+      const list = document.getElementById('ranking');
+      list.innerHTML = '';
+      ranking.forEach(r => {
+        const li = document.createElement('li');
+        li.textContent = `${r.name}: ${r.score}`;
+        list.appendChild(li);
+      });
+    });
+  };
+</script>
+
 
 </body>
 </html>
