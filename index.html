@@ -275,12 +275,13 @@
         confetti();
       }
       const name = prompt('Digite seu nome para o ranking:');
-      if (name) {
-        storeRankOnline(name, total);
-        renderRankOnline();
-      }
-      $('#result-msg').text(msg);
-      showScreen('result');
+ if (name) {
+  storeRankOnline(name, total);
+}
+$('#result-msg').text(msg);
+showScreen('result');
+renderRankOnline(); // <- Agora sim, depois de mostrar a tela
+
     }
 
     // Reset Game
